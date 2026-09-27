@@ -1,0 +1,28 @@
+# Aiflow — 不提交到 GitHub 的内容
+
+# 设计与需求文档（本地保留，不进版本库）
+/docs/
+/agent.md
+
+# Command Code 本地配置 / 会话 / 偏好
+/.commandcode/
+
+# Node / Electron
+node_modules/
+out/
+dist/
+dist-electron/
+release/
+*.log
+
+# 环境与密钥（安全起见）
+.env
+.env.*
+*.local
+
+# 编辑器 / 系统
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
