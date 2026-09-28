@@ -23,6 +23,9 @@ interface Props {
   onClose: () => void
 }
 
+const itemClass =
+  'block w-full px-3 py-1.5 text-left text-xs transition-colors disabled:opacity-40 focus-visible:[outline-offset:-2px]'
+
 export function ContextMenu({ state, onClose }: Props) {
   const [inputFor, setInputFor] = useState<string | null>(null)
   const [value, setValue] = useState('')
@@ -53,7 +56,8 @@ export function ContextMenu({ state, onClose }: Props) {
 
   return (
     <div
-      className="fixed z-[60] min-w-[180px] rounded-lg border border-slate-700 bg-slate-900 py-1 shadow-2xl"
+      role="menu"
+      className="fixed z-[60] min-w-[190px] rounded-lg border border-line bg-raised py-1 shadow-elevated"
       style={{ left: state.x, top: state.y }}
       onClick={(event) => event.stopPropagation()}
       onContextMenu={(event) => {
@@ -66,7 +70,7 @@ export function ContextMenu({ state, onClose }: Props) {
           return (
             <form
               key={item.label}
-              className="flex gap-1 px-2 py-1"
+              className="flex gap-1.5 px-2 py-1"
               onSubmit={(event) => {
                 event.preventDefault()
                 const trimmed = value.trim()
@@ -76,15 +80,19 @@ export function ContextMenu({ state, onClose }: Props) {
             >
               <input
                 autoFocus
+                aria-label={item.label}
                 value={value}
                 onChange={(event) => setValue(event.target.value)}
                 placeholder={item.input.placeholder}
-                className="w-44 rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-xs text-slate-100 outline-none focus:border-indigo-500"
+                className="w-44 rounded-md border border-line bg-canvas px-2 py-1 text-xs text-fg transition-colors placeholder:text-faint focus:border-accent-line"
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') onClose()
                 }}
               />
-              <button type="submit" className="shrink-0 rounded bg-indigo-600 px-2 text-xs text-white">
+              <button
+                type="submit"
+                className="shrink-0 rounded-md bg-accent px-2 text-xs text-on-accent transition-colors hover:bg-accent-hover"
+              >
                 确定
               </button>
             </form>
@@ -97,6 +105,7 @@ export function ContextMenu({ state, onClose }: Props) {
           <button
             key={item.label}
             type="button"
+            role="menuitem"
             disabled={item.disabled}
             onClick={() => {
               if (item.input) {
@@ -112,10 +121,10 @@ export function ContextMenu({ state, onClose }: Props) {
               if (isConfirming) item.onConfirm?.()
               else item.onSelect?.()
             }}
-            className={`block w-full px-3 py-1.5 text-left text-xs disabled:opacity-40 ${
+            className={`${itemClass} ${
               item.danger || isConfirming
-                ? 'text-rose-200 hover:bg-rose-900/40'
-                : 'text-slate-200 hover:bg-slate-800'
+                ? 'text-danger-text hover:bg-danger-soft'
+                : 'text-muted hover:bg-accent-soft hover:text-fg'
             }`}
           >
             {isConfirming ? item.confirmLabel : item.label}

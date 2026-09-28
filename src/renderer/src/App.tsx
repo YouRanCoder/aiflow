@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { NodeWithTurns } from '@shared/types/domain'
 import { formatTokens } from './lib/format'
+import { useTheme, type ThemePreference } from './lib/theme'
 import { ContextRing } from './features/ContextRing'
 import { GraphCanvas } from './features/GraphCanvas'
 import { NodeDetail } from './features/NodeDetail'
@@ -8,6 +9,7 @@ import { NewCanvasDialog } from './features/NewCanvasDialog'
 import { PanelSplitter } from './features/PanelSplitter'
 import { SettingsDialog } from './features/SettingsDialog'
 import { Sidebar } from './features/Sidebar'
+import { ThemeToggle } from './features/ThemeToggle'
 import { TreeCanvas } from './features/TreeCanvas'
 import { useAppStore } from './store/useAppStore'
 
@@ -58,8 +60,37 @@ const SKINS: Array<{ id: 'graph' | 'tree' | 'file-tree'; label: string; ready: b
 
 const DEFAULT_SKIN: 'graph' | 'tree' | 'file-tree' = 'graph'
 
-const selectClass =
-  'rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-200 outline-none hover:border-slate-600 focus:border-indigo-500 disabled:opacity-50'
+const controlClass =
+  'rounded-md border border-line bg-raised px-1.5 py-1 text-xs text-fg transition-colors hover:border-line-strong disabled:opacity-45'
+
+/** 顶栏左上的分支记号：一个点分成两个点，正好是这个应用在做的事 */
+function AppMark() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className="h-4 w-4 shrink-0 text-accent-text"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M3.6 8h3.6" />
+      <path d="M7.2 8c1.7 0 2.1-3.9 3.7-3.9M7.2 8c1.7 0 2.1 3.9 3.7 3.9" />
+      <circle cx="2.6" cy="8" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="12.5" cy="4.1" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="12.5" cy="11.9" r="1.3" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function Banner({ tone, children }: { tone: 'warn' | 'danger'; children: ReactNode }) {
+  const styles =
+    tone === 'danger'
+      ? 'border-danger/35 bg-danger-soft text-danger-text'
+      : 'border-warn/35 bg-warn-soft text-warn-text'
+  return <div className={`border-b px-4 py-1.5 text-xs ${styles}`}>{children}</div>
+}
 
 export function App() {
   const init = useAppStore((s) => s.init)
@@ -78,6 +109,9 @@ export function App() {
   const dragRef = useRef<{ key: PanelKey; startX: number; startWidth: number } | null>(null)
   const latestWidthRef = useRef(0)
   const layoutAppliedRef = useRef(false)
+
+  const themePreference: ThemePreference = config?.ui.theme ?? 'system'
+  useTheme(themePreference)
 
   const canvas = detail?.canvas ?? null
   const providers = config?.providers ?? []
@@ -175,6 +209,11 @@ export function App() {
     void saveConfig({ ui: { ...config.ui, skin: nextSkin } })
   }
 
+  function setTheme(nextTheme: ThemePreference): void {
+    if (!config) return
+    void saveConfig({ ui: { ...config.ui, theme: nextTheme } })
+  }
+
   const configuredSkin = config?.ui.skin ?? DEFAULT_SKIN
   const skin = SKINS.some((s) => s.id === configuredSkin && s.ready) ? configuredSkin : DEFAULT_SKIN
 
@@ -208,25 +247,47 @@ export function App() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-slate-950 text-slate-100">
-      <header className="flex h-11 shrink-0 items-center justify-between border-b border-slate-800 px-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-slate-200">Aiflow</span>
-          {canvas && <span className="text-xs text-slate-400">{canvas.title}</span>}
-          {isGenerating && <span className="text-xs text-indigo-300">生成中…</span>}
+    <div className="flex h-full flex-col bg-canvas text-fg">
+      <header className="flex h-11 shrink-0 items-center justify-between gap-3 border-b border-line bg-panel px-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <AppMark />
+          <span className="shrink-0 text-sm font-semibold tracking-tight text-fg">Aiflow</span>
+          {canvas && (
+            <>
+              <span className="shrink-0 text-faint" aria-hidden="true">
+                /
+              </span>
+              <span className="truncate text-xs text-muted" title={canvas.title}>
+                {canvas.title}
+              </span>
+            </>
+          )}
+          {isGenerating && (
+            <span className="flex shrink-0 items-center gap-1.5 pl-1 text-xs text-accent-text">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" aria-hidden="true" />
+              生成中
+            </span>
+          )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex rounded border border-slate-700 p-0.5">
+        <div className="flex shrink-0 items-center gap-2.5">
+          <div
+            role="group"
+            aria-label="画布视图"
+            className="flex items-center gap-0.5 rounded-md border border-line p-0.5"
+          >
             {SKINS.map((item) => (
               <button
                 type="button"
                 key={item.id}
                 disabled={!item.ready}
-                title={item.ready ? item.label : `${item.label}视图待实现`}
+                aria-pressed={skin === item.id && item.ready}
+                title={item.ready ? `${item.label}视图` : `${item.label}视图待实现`}
                 onClick={() => setSkin(item.id)}
-                className={`rounded px-2 py-0.5 text-xs disabled:opacity-30 ${
-                  skin === item.id ? 'bg-slate-700 text-slate-100' : 'text-slate-400 hover:text-slate-200'
+                className={`rounded px-2 py-0.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${
+                  skin === item.id
+                    ? 'bg-accent-soft text-accent-text'
+                    : 'text-muted hover:bg-raised hover:text-fg'
                 }`}
               >
                 {item.label}
@@ -234,10 +295,13 @@ export function App() {
             ))}
           </div>
 
+          <ThemeToggle value={themePreference} onChange={setTheme} />
+
           {canvas ? (
             <div className="flex items-center gap-1" title="本画布使用的 Provider 与模型">
               <select
-                className={`${selectClass} ${canvasProviderMissing ? 'border-rose-600 text-rose-200' : ''}`}
+                aria-label="Provider"
+                className={`${controlClass} ${canvasProviderMissing ? 'border-danger text-danger-text' : ''}`}
                 value={canvasProvider ? canvas.providerId : ''}
                 disabled={isGenerating || providers.length === 0}
                 onChange={(e) => void changeProvider(e.target.value)}
@@ -256,7 +320,8 @@ export function App() {
 
               {modelOptions.length > 0 ? (
                 <select
-                  className={selectClass}
+                  aria-label="模型"
+                  className={controlClass}
                   value={canvas.model}
                   disabled={isGenerating}
                   onChange={(e) => void setCanvasProvider(canvas.providerId, e.target.value)}
@@ -270,7 +335,8 @@ export function App() {
                 </select>
               ) : (
                 <input
-                  className={`${selectClass} w-40`}
+                  aria-label="模型名"
+                  className={`${controlClass} w-40`}
                   value={modelDraft}
                   disabled={isGenerating}
                   placeholder="填写模型名"
@@ -283,42 +349,43 @@ export function App() {
               )}
             </div>
           ) : (
-            <span className="text-xs text-slate-500">未选择画布</span>
+            <span className="text-xs text-faint">未选择画布</span>
           )}
 
           {selectedNode && (
-            <ContextRing
-              used={contextUsed}
-              total={contextWindow}
-              label={selectedNode.title}
-            />
+            <ContextRing used={contextUsed} total={contextWindow} label={selectedNode.title} />
           )}
 
           {detail && (
-            <span className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
-              画布总计 {formatTokens(detail.tokens.total)}
+            <span
+              className="tnum flex items-center gap-1.5 text-xs text-muted"
+              title="本画布累计 token"
+            >
+              <span className="text-faint">画布</span>
+              {formatTokens(detail.tokens.total)}
             </span>
           )}
         </div>
       </header>
 
       {providers.length === 0 && (
-        <div className="border-b border-amber-700/40 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-200">
-          还没有配置 Provider。点击左下角「设置」添加 Base URL 与 API Key 后即可新建画布。
-        </div>
+        <Banner tone="warn">
+          还没有配置 Provider。点左下角「设置」添加 Base URL 与 API Key 后即可新建画布。
+        </Banner>
       )}
 
       {canvasProviderMissing && (
-        <div className="border-b border-rose-700/60 bg-rose-500/10 px-4 py-1.5 text-xs text-rose-200">
-          本画布原来使用的 Provider「{canvas?.providerId}」已被删除，请在顶栏为它重新选择一个 Provider。
-        </div>
+        <Banner tone="danger">
+          本画布原来使用的 Provider「{canvas?.providerId}」已被删除，请在顶栏为它重新选择一个
+          Provider。
+        </Banner>
       )}
 
       {providers.length > 0 && !canvasProviderMissing && keyStatus && !keyStatus.hasKey && (
-        <div className="border-b border-amber-700/40 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-200">
+        <Banner tone="warn">
           尚未配置「{activeProvider?.name ?? activeProviderId}」的 API Key，请在「设置」里补上
           {canvas ? '，或在顶栏切换本画布的 Provider' : ''}。
-        </div>
+        </Banner>
       )}
 
       <div className="flex min-h-0 flex-1">
@@ -357,10 +424,18 @@ export function App() {
       <NewCanvasDialog />
 
       {error && (
-        <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-rose-700/60 bg-rose-950/90 px-4 py-2 text-xs text-rose-100 shadow-lg">
+        <div
+          role="alert"
+          className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-danger/40 bg-raised px-4 py-2 text-xs text-danger-text shadow-elevated"
+        >
           <span className="max-w-[600px]">{error}</span>
-          <button type="button" onClick={clearError} className="text-rose-300">
-            ×
+          <button
+            type="button"
+            onClick={clearError}
+            aria-label="关闭提示"
+            className="rounded px-1 text-faint transition-colors hover:text-fg"
+          >
+            ✕
           </button>
         </div>
       )}

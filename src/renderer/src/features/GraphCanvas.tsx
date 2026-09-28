@@ -25,6 +25,19 @@ const NODE_WIDTH = 208
 const COLUMN_WIDTH = 290
 const ROW_HEIGHT = 116
 
+/** 状态用「圆点 + 文字」表达，不用填色药丸；色弱用户靠文字也能读出来 */
+function StateDot({ tone, children }: { tone: 'accent' | 'danger' | 'warn'; children: React.ReactNode }) {
+  const dot = tone === 'danger' ? 'bg-danger' : tone === 'warn' ? 'bg-warn' : 'bg-accent'
+  const text =
+    tone === 'danger' ? 'text-danger-text' : tone === 'warn' ? 'text-warn-text' : 'text-accent-text'
+  return (
+    <span className={`flex items-center gap-1 ${text}`}>
+      <span className={`h-1 w-1 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
+      {children}
+    </span>
+  )
+}
+
 interface TopicData extends Record<string, unknown> {
   title: string
   turnCount: number
@@ -47,51 +60,46 @@ function TopicNode({ id, data }: NodeProps) {
     <div
       style={{ width: NODE_WIDTH }}
       onContextMenu={(event) => node.onOpenMenu(event, id)}
-      className={`cursor-context-menu rounded-lg border px-3 py-2 text-left shadow-sm transition-colors ${
+      className={`cursor-context-menu rounded-md border px-3 py-2 text-left transition-colors ${
         node.selected
-          ? 'border-indigo-400 bg-indigo-600/25'
-          : 'border-slate-700 bg-slate-900 hover:border-slate-500'
+          ? 'border-accent bg-accent-soft'
+          : 'border-line bg-raised hover:border-line-strong'
       }`}
     >
-      <Handle type="target" position={Position.Left} className="!h-1.5 !w-1.5 !border-0 !bg-slate-500" />
+      <Handle type="target" position={Position.Left} className="!h-1.5 !w-1.5 !border-0 !bg-line-strong" />
 
       <div className="flex items-start gap-1">
-        <span className="flex-1 text-xs leading-snug text-slate-100">{truncate(node.title, 44)}</span>
+        <span className="flex-1 text-xs leading-snug text-fg">{truncate(node.title, 44)}</span>
         {node.childCount > 0 && (
           <button
             type="button"
             disabled={node.locked}
             title={node.collapsed ? '展开子节点' : '折叠子节点'}
+            aria-label={node.collapsed ? '展开子节点' : '折叠子节点'}
             onClick={(event) => {
               event.stopPropagation()
               node.onToggleCollapse(id)
             }}
-            className="shrink-0 rounded px-1 text-[10px] text-slate-400 hover:text-slate-100 disabled:opacity-40"
+            className="shrink-0 rounded px-1 text-2xs text-faint transition-colors hover:text-fg disabled:opacity-40"
           >
             {node.collapsed ? `▸${node.childCount}` : '▾'}
           </button>
         )}
       </div>
 
-      <div className="mt-1.5 flex flex-wrap items-center gap-1">
-        {node.generating && (
-          <span className="rounded bg-indigo-500/20 px-1 text-[10px] text-indigo-200">生成中…</span>
-        )}
-        <span className="rounded bg-slate-700/60 px-1 text-[10px] text-slate-300">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-2xs">
+        {node.generating && <StateDot tone="accent">生成中</StateDot>}
+        <span className="tnum text-faint">
           {node.turnCount > 0 ? `${node.turnCount} 轮` : '还没提问'}
         </span>
-        {node.failed && <span className="rounded bg-rose-500/20 px-1 text-[10px] text-rose-200">失败</span>}
-        {node.summarized && (
-          <span className="rounded bg-amber-500/15 px-1 text-[10px] text-amber-300">已压缩</span>
-        )}
+        {node.failed && <StateDot tone="danger">失败</StateDot>}
+        {node.summarized && <StateDot tone="warn">已压缩</StateDot>}
         {node.isLeaf && node.tokens > 0 && (
-          <span className="rounded bg-slate-700/70 px-1 text-[10px] text-slate-300">
-            {formatTokens(node.tokens)}
-          </span>
+          <span className="tnum ml-auto text-faint">{formatTokens(node.tokens)}</span>
         )}
       </div>
 
-      <Handle type="source" position={Position.Right} className="!h-1.5 !w-1.5 !border-0 !bg-slate-500" />
+      <Handle type="source" position={Position.Right} className="!h-1.5 !w-1.5 !border-0 !bg-line-strong" />
     </div>
   )
 }
@@ -102,7 +110,7 @@ const nodeTypes = { topic: TopicNode }
  * React Flow 的内部各层都是 `position: absolute; height: 100%`，而根元素 `.react-flow`
  * 自身不带尺寸，所以必须由我们给它确定高度——否则高度塌成 0，画布一片空白。
  */
-const REACT_FLOW_CLASS = 'h-full w-full bg-slate-950'
+const REACT_FLOW_CLASS = 'h-full w-full'
 
 export function GraphCanvas() {
   return (
@@ -300,7 +308,7 @@ function GraphInner() {
 
   if (!detail) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">
+      <div className="absolute inset-0 flex items-center justify-center text-sm text-faint">
         选择或新建一个画布
       </div>
     )
@@ -309,15 +317,16 @@ function GraphInner() {
   if (nodes.length === 0) {
     return (
       <div className="absolute inset-0 flex items-center justify-center p-6">
-        <div className="w-[440px] rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-          <div className="text-sm font-medium text-slate-200">这是一张空画布</div>
-          <p className="mt-1 text-xs leading-relaxed text-slate-400">
-            先写下根话题（例如「C语言指针」），再在话题上<b className="text-slate-300">右键 →「添加子话题」</b>
-            把结构搭出来。这一步<strong className="text-slate-300">不会调用模型</strong>；
+        <div className="w-[440px] rounded-lg border border-line bg-raised p-5">
+          <div className="text-sm font-medium text-fg">这是一张空画布</div>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted">
+            先写下根话题（例如「C语言指针」），再在话题上
+            <b className="font-medium text-fg">右键 →「添加子话题」</b>
+            把结构搭出来。这一步<strong className="font-medium text-fg">不会调用模型</strong>；
             想提问时选中话题，在右侧输入框提问即可。
           </p>
           <form
-            className="mt-3 flex gap-2"
+            className="mt-3.5 flex gap-2"
             onSubmit={(event) => {
               event.preventDefault()
               void submitRoot()
@@ -325,15 +334,16 @@ function GraphInner() {
           >
             <input
               autoFocus
+              aria-label="根话题"
               value={rootDraft}
               onChange={(event) => setRootDraft(event.target.value)}
               placeholder="例如：C语言指针"
-              className="flex-1 rounded border border-slate-700 bg-slate-950/60 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-indigo-500"
+              className="flex-1 rounded-md border border-line bg-canvas px-2.5 py-1.5 text-sm text-fg transition-colors placeholder:text-faint focus:border-accent-line"
             />
             <button
               type="submit"
               disabled={!rootDraft.trim()}
-              className="shrink-0 rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
+              className="shrink-0 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-40"
             >
               创建根节点
             </button>
@@ -344,7 +354,7 @@ function GraphInner() {
   }
 
   return (
-    <div className="absolute inset-0">
+    <div className="absolute inset-0 bg-canvas">
       <ReactFlow
         nodes={flowNodes}
         edges={edges}
@@ -364,8 +374,13 @@ function GraphInner() {
         fitViewOptions={{ padding: 0.25, maxZoom: 1.25 }}
         className={REACT_FLOW_CLASS}
       >
-        <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="#1e293b" />
-        <Controls className="!rounded !border !border-slate-700 !bg-slate-800" showInteractive={false} />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={18}
+          size={1}
+          color="oklch(var(--c-line))"
+        />
+        <Controls showInteractive={false} />
       </ReactFlow>
       <ContextMenu state={menu} onClose={() => setMenu(null)} />
     </div>

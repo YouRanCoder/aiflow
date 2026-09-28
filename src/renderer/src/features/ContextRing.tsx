@@ -12,7 +12,13 @@ interface Props {
 export function ContextRing({ used, total, label }: Props) {
   const ratio = total > 0 ? Math.min(1, used / total) : 0
   const percent = Math.round(ratio * 1000) / 10
-  const color = ratio >= 0.9 ? '#fb7185' : ratio >= 0.7 ? '#fbbf24' : '#818cf8'
+  // 占用越高越接近告警色：强调色 → 琥珀 → 红
+  const color =
+    ratio >= 0.9
+      ? 'oklch(var(--c-danger))'
+      : ratio >= 0.7
+        ? 'oklch(var(--c-warn))'
+        : 'oklch(var(--c-accent))'
 
   const size = 26
   const stroke = 3
@@ -29,18 +35,19 @@ export function ContextRing({ used, total, label }: Props) {
 
   return (
     <div
+      role="img"
       title={tip}
       aria-label={tip}
       className="flex shrink-0 cursor-help items-center justify-center"
       style={{ width: size, height: size }}
     >
-      <svg width={size} height={size} className="-rotate-90">
+      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#1e293b"
+          stroke="oklch(var(--c-line))"
           strokeWidth={stroke}
         />
         <circle

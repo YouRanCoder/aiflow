@@ -41,52 +41,59 @@ function NodeRow({
         ref={rowRef}
         role="button"
         tabIndex={0}
+        aria-current={isSelected ? 'true' : undefined}
         onClick={() => selectNode(node.id)}
         onContextMenu={(event) => onOpenMenu(event, node.id)}
         onKeyDown={(event) => {
-          if (event.key === 'Enter') selectNode(node.id)
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            selectNode(node.id)
+          }
         }}
-        className={`flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm ${
-          isSelected ? 'bg-indigo-600/25 ring-1 ring-indigo-500/60' : 'hover:bg-slate-800/70'
+        className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+          isSelected ? 'bg-accent-soft text-fg' : 'text-muted hover:bg-raised hover:text-fg'
         }`}
         style={{ paddingLeft: `${depth * 18 + 8}px` }}
       >
         {children.length > 0 ? (
           <button
             type="button"
+            aria-label={node.collapsed ? '展开子话题' : '折叠子话题'}
             onClick={(event) => {
               event.stopPropagation()
               void toggleCollapse(node.id)
             }}
-            className="w-4 shrink-0 text-xs text-slate-400 hover:text-slate-200"
+            className="w-4 shrink-0 text-2xs text-faint transition-colors hover:text-fg"
           >
             {node.collapsed ? '▸' : '▾'}
           </button>
         ) : (
-          <span className="w-4 shrink-0 text-xs text-slate-600">·</span>
+          <span className="w-4 shrink-0 text-center text-2xs text-faint" aria-hidden="true">
+            ·
+          </span>
         )}
 
-        <span
-          className={`flex-1 truncate ${
-            hasError ? 'text-rose-300' : isSelected ? 'text-slate-100' : 'text-slate-300'
-          }`}
-        >
+        <span className={`flex-1 truncate ${hasError ? 'text-danger-text' : 'text-fg'}`}>
           {truncate(node.title, 44)}
         </span>
 
-        {generating && <span className="shrink-0 text-xs text-indigo-300">生成中…</span>}
-        <span className="shrink-0 rounded bg-slate-700/60 px-1 text-[10px] text-slate-300">
+        {generating && (
+          <span className="flex shrink-0 items-center gap-1 text-2xs text-accent-text">
+            <span className="h-1 w-1 animate-pulse rounded-full bg-accent" aria-hidden="true" />
+            生成中
+          </span>
+        )}
+        <span className="tnum shrink-0 text-2xs text-faint">
           {node.turns.length > 0 ? `${node.turns.length} 轮` : '还没提问'}
         </span>
         {node.summary && (
-          <span className="shrink-0 rounded bg-amber-500/15 px-1 text-[10px] text-amber-300">
+          <span className="flex shrink-0 items-center gap-1 text-2xs text-warn-text">
+            <span className="h-1 w-1 rounded-full bg-warn" aria-hidden="true" />
             已压缩
           </span>
         )}
         {info?.isLeaf && info.tokens.total > 0 && (
-          <span className="shrink-0 rounded bg-slate-700/70 px-1.5 text-[10px] text-slate-300">
-            {formatTokens(info.tokens.total)}
-          </span>
+          <span className="tnum shrink-0 text-2xs text-faint">{formatTokens(info.tokens.total)}</span>
         )}
       </div>
 
@@ -171,7 +178,7 @@ export function TreeCanvas() {
 
   if (!detail) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-slate-500">
+      <div className="flex h-full items-center justify-center text-sm text-faint">
         选择或新建一个画布
       </div>
     )
@@ -179,18 +186,16 @@ export function TreeCanvas() {
 
   if (roots.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-1 text-sm text-slate-500">
+      <div className="flex h-full flex-col items-center justify-center gap-1 text-sm text-faint">
         <span>还没有话题。</span>
         <span className="text-xs">在右侧写下根话题，点「创建根话题」把结构搭起来。</span>
-        <span className="text-xs text-slate-600">
-          这一步不会调用模型；提问请选中话题后在右侧输入。
-        </span>
+        <span className="text-xs">这一步不会调用模型；提问请选中话题后在右侧输入。</span>
       </div>
     )
   }
 
   return (
-    <div className="h-full overflow-y-auto p-3">
+    <div className="scroll-stable h-full overflow-y-auto bg-canvas p-3">
       {roots.map((root) => (
         <NodeRow
           key={root.id}

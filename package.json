@@ -1,6 +1,6 @@
 {
   "name": "aiflow",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "更高效地进行发散式学习 —— 用思维导图承载与 AI 的对话",
   "main": "./out/main/index.js",
   "author": "YouRanCoder",

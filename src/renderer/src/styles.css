@@ -2,21 +2,142 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
+/* ==========================================================================
+   设计令牌
+   变量值 = oklch 的「亮度 彩度 色相」。深色为默认，浅色在 [data-theme] 下覆盖。
+   中性色带一点点暖调（H≈70），强调色是偏青的松绿（H≈158），刻意避开蓝紫。
+   ========================================================================== */
+:root {
+  color-scheme: dark;
+
+  /* 表面：画布 < 面板 < 抬升层 */
+  --c-canvas: 0.185 0.005 70;
+  --c-panel: 0.222 0.006 70;
+  --c-raised: 0.274 0.007 70;
+
+  /* 描边 */
+  --c-line: 0.318 0.008 70;
+  --c-line-strong: 0.402 0.01 70;
+
+  /* 文字 */
+  --c-fg: 0.93 0.005 80;
+  --c-muted: 0.715 0.008 75;
+  --c-faint: 0.55 0.008 72;
+
+  /* 强调色：松绿（深色下压低彩度，避免发光） */
+  --c-accent: 0.71 0.1 158;
+  --c-accent-hover: 0.765 0.095 158;
+  --c-on-accent: 0.17 0.02 160;
+  --c-accent-soft: 0.29 0.036 158;
+  --c-accent-text: 0.79 0.085 160;
+  --c-accent-line: 0.47 0.08 158;
+
+  /* 状态 */
+  --c-warn: 0.76 0.118 80;
+  --c-warn-soft: 0.305 0.048 80;
+  --c-warn-text: 0.825 0.105 84;
+  --c-danger: 0.61 0.17 26;
+  --c-danger-soft: 0.3 0.06 26;
+  --c-danger-text: 0.78 0.13 30;
+  --c-ok: 0.72 0.118 148;
+  --c-ok-soft: 0.3 0.048 148;
+  --c-ok-text: 0.82 0.11 148;
+
+  --shadow-elevated:
+    0 14px 34px -18px rgb(0 0 0 / 0.7), 0 2px 8px -5px rgb(0 0 0 / 0.55);
 }
 
-body {
-  font-family:
-    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+[data-theme='light'] {
+  color-scheme: light;
+
+  --c-canvas: 0.958 0.004 75;
+  --c-panel: 0.981 0.003 75;
+  --c-raised: 0.996 0.002 75;
+
+  --c-line: 0.892 0.006 74;
+  --c-line-strong: 0.818 0.008 74;
+
+  --c-fg: 0.268 0.012 62;
+  --c-muted: 0.515 0.01 68;
+  --c-faint: 0.615 0.009 72;
+
+  --c-accent: 0.455 0.108 158;
+  --c-accent-hover: 0.405 0.108 158;
+  --c-on-accent: 0.985 0.004 75;
+  --c-accent-soft: 0.945 0.03 158;
+  --c-accent-text: 0.44 0.108 158;
+  --c-accent-line: 0.795 0.058 158;
+
+  --c-warn: 0.615 0.115 80;
+  --c-warn-soft: 0.955 0.042 82;
+  --c-warn-text: 0.478 0.1 72;
+  --c-danger: 0.552 0.18 24;
+  --c-danger-soft: 0.955 0.034 24;
+  --c-danger-text: 0.478 0.175 24;
+  --c-ok: 0.52 0.108 150;
+  --c-ok-soft: 0.95 0.034 150;
+  --c-ok-text: 0.45 0.105 150;
+
+  --shadow-elevated:
+    0 14px 32px -20px rgb(30 26 20 / 0.28), 0 2px 6px -3px rgb(30 26 20 / 0.12);
 }
 
-/* 回答的 Markdown 排版（Tailwind preflight 把标题/列表/间距都清掉了，这里补回来） */
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    font-family: theme('fontFamily.sans');
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* 统一点击时只描边不换字重，避免中文在按钮按下时抖动 */
+  button {
+    font: inherit;
+  }
+
+  /* 焦点环：2px 强调色 + 外偏移。不要在任何地方写 outline-none。 */
+  :focus-visible {
+    outline: 2px solid oklch(var(--c-accent) / 0.85);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: oklch(var(--c-accent) / 0.26);
+  }
+}
+
+@layer utilities {
+  /* token 数字用等宽字形，列表里的数字才不会跳 */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 面板内的细滚动条区域留白补偿，避免出现时内容宽度跳动 */
+  .scroll-stable {
+    scrollbar-gutter: stable;
+  }
+}
+
+/* ==========================================================================
+   回答区的 Markdown 排版（Tailwind preflight 清掉了标题/列表/间距，这里补回来）
+   ========================================================================== */
+.aiflow-markdown {
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.aiflow-markdown > :first-child {
+  margin-top: 0;
+}
+
 .aiflow-markdown > * + * {
-  margin-top: 0.6rem;
+  margin-top: 0.75rem;
 }
 
 .aiflow-markdown h1,
@@ -24,62 +145,170 @@ body {
 .aiflow-markdown h3,
 .aiflow-markdown h4 {
   font-weight: 600;
-  color: rgb(226 232 240);
+  color: oklch(var(--c-fg));
+  letter-spacing: -0.01em;
 }
-.aiflow-markdown h1 { font-size: 1.05rem; }
-.aiflow-markdown h2 { font-size: 1rem; }
-.aiflow-markdown h3 { font-size: 0.95rem; }
+.aiflow-markdown h1 {
+  font-size: 1.05rem;
+}
+.aiflow-markdown h2 {
+  font-size: 1rem;
+}
+.aiflow-markdown h3,
+.aiflow-markdown h4 {
+  font-size: 0.95rem;
+}
+
+.aiflow-markdown strong {
+  font-weight: 600;
+  color: oklch(var(--c-fg));
+}
 
 .aiflow-markdown ul,
 .aiflow-markdown ol {
-  padding-left: 1.25rem;
+  padding-left: 1.4rem;
 }
-.aiflow-markdown ul { list-style: disc; }
-.aiflow-markdown ol { list-style: decimal; }
-.aiflow-markdown li + li { margin-top: 0.2rem; }
+.aiflow-markdown ul {
+  list-style: disc;
+}
+.aiflow-markdown ol {
+  list-style: decimal;
+}
+.aiflow-markdown li + li {
+  margin-top: 0.25rem;
+}
+.aiflow-markdown li::marker {
+  color: oklch(var(--c-faint));
+}
 
 .aiflow-markdown code {
-  background: rgb(2 6 23);
-  border-radius: 0.25rem;
-  padding: 0.1rem 0.3rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.85em;
-  color: rgb(199 210 254);
+  background: oklch(var(--c-canvas));
+  border: 1px solid oklch(var(--c-line));
+  border-radius: 4px;
+  padding: 0.08rem 0.32rem;
+  font-family: theme('fontFamily.mono');
+  font-size: 0.86em;
+  color: oklch(var(--c-accent-text));
 }
 
 .aiflow-markdown pre {
-  background: rgb(2 6 23);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
+  background: oklch(var(--c-canvas));
+  border: 1px solid oklch(var(--c-line));
+  border-radius: 6px;
+  padding: 0.75rem 0.85rem;
   overflow-x: auto;
 }
+
 .aiflow-markdown pre code {
   background: transparent;
+  border: 0;
   padding: 0;
-  color: rgb(226 232 240);
+  color: oklch(var(--c-fg));
+  font-size: 0.82em;
 }
 
 .aiflow-markdown blockquote {
-  border-left: 2px solid rgb(245 158 11 / 0.6);
-  padding-left: 0.75rem;
-  color: rgb(253 230 138);
+  border-left: 2px solid oklch(var(--c-line-strong));
+  padding-left: 0.85rem;
+  color: oklch(var(--c-muted));
 }
 
 .aiflow-markdown table {
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  display: block;
+  overflow-x: auto;
 }
 .aiflow-markdown th,
 .aiflow-markdown td {
-  border: 1px solid rgb(51 65 85);
-  padding: 0.25rem 0.5rem;
+  border: 1px solid oklch(var(--c-line));
+  padding: 0.3rem 0.55rem;
+  text-align: left;
+}
+.aiflow-markdown th {
+  background: oklch(var(--c-raised));
+  color: oklch(var(--c-fg));
+  font-weight: 600;
 }
 
 .aiflow-markdown a {
-  color: rgb(129 140 248);
+  color: oklch(var(--c-accent-text));
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .aiflow-markdown hr {
-  border-color: rgb(51 65 85);
+  border-color: oklch(var(--c-line));
+}
+
+/* ==========================================================================
+   React Flow 的主题覆写（第三方组件内部类名，只能在 CSS 里改）
+   ========================================================================== */
+.react-flow {
+  background-color: transparent;
+}
+
+.react-flow__edge-path {
+  stroke: oklch(var(--c-line-strong));
+  stroke-width: 1.25;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke: oklch(var(--c-accent));
+  stroke-width: 1.5;
+}
+
+.react-flow__handle {
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  min-height: 6px;
+  background: oklch(var(--c-line-strong));
+  border: 0;
+}
+
+.react-flow__controls {
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid oklch(var(--c-line));
+  box-shadow: var(--shadow-elevated);
+}
+
+.react-flow__controls-button {
+  width: 26px;
+  height: 26px;
+  background: oklch(var(--c-raised));
+  border-bottom: 1px solid oklch(var(--c-line));
+  color: oklch(var(--c-muted));
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: 0;
+}
+
+.react-flow__controls-button:hover {
+  background: oklch(var(--c-panel));
+  color: oklch(var(--c-fg));
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+.react-flow__attribution {
+  background: transparent;
+  color: oklch(var(--c-faint));
+}
+
+/* ==========================================================================
+   动效：产品界面只保留短促、功能性的一档；尊重系统「减少动态效果」
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

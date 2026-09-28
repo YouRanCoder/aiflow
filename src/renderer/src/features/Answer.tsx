@@ -10,10 +10,15 @@ interface Props {
 
 export function Answer({ text, generating = false, onContextMenu }: Props) {
   return (
-    <div className="aiflow-markdown text-sm leading-relaxed text-slate-200" onContextMenu={onContextMenu}>
+    <div className="aiflow-markdown text-sm text-fg" onContextMenu={onContextMenu}>
       {text ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown> : null}
-      {!text && !generating && <span className="text-slate-500">（空回答）</span>}
-      {generating && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-indigo-400" />}
+      {!text && !generating && <span className="text-faint">（空回答）</span>}
+      {generating && (
+        <span
+          className="ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-accent"
+          aria-hidden="true"
+        />
+      )}
     </div>
   )
 }

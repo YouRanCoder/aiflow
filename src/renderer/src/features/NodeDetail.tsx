@@ -12,6 +12,11 @@ interface Props {
   onToggleCollapse: () => void
 }
 
+const field =
+  'w-full rounded-md border border-line bg-raised px-2 py-1.5 text-sm text-fg transition-colors placeholder:text-faint focus:border-accent-line'
+
+const metaButton = 'text-2xs transition-colors disabled:opacity-40'
+
 export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
   const detail = useAppStore((s) => s.detail)
   const selectedNodeId = useAppStore((s) => s.selectedNodeId)
@@ -106,22 +111,20 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
     })
   }
 
-  const field =
-    'w-full rounded border border-slate-700 bg-slate-950/60 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-indigo-500'
-
   // 收起后只留一条窄边条，点一下再展开
   if (collapsed) {
     return (
-      <div className="flex w-9 shrink-0 flex-col items-center gap-2 border-l border-slate-800 bg-slate-900/40 py-2">
+      <div className="flex w-9 shrink-0 flex-col items-center gap-2 border-l border-line bg-panel py-2">
         <button
           type="button"
           onClick={onToggleCollapse}
           title="展开话题详情"
-          className="rounded px-1 py-0.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          aria-label="展开话题详情"
+          className="rounded px-1 py-0.5 text-muted transition-colors hover:bg-raised hover:text-fg"
         >
           «
         </button>
-        <span className="text-[11px] tracking-widest text-slate-500 [writing-mode:vertical-rl]">
+        <span className="text-2xs tracking-widest text-faint [writing-mode:vertical-rl]">
           话题详情
         </span>
       </div>
@@ -129,61 +132,64 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
   }
 
   return (
-    <section
-      style={{ width }}
-      className="flex shrink-0 flex-col border-l border-slate-800 bg-slate-900/40"
-    >
-      <div className="flex items-center justify-between border-b border-slate-800 px-3 py-1.5">
-        <span className="text-[11px] uppercase tracking-wide text-slate-500">话题详情</span>
+    <section style={{ width }} className="flex shrink-0 flex-col border-l border-line bg-panel">
+      <div className="flex items-center justify-between border-b border-line px-3 py-1.5">
+        <span className="text-2xs text-faint">话题详情</span>
         <button
           type="button"
           onClick={onToggleCollapse}
           title="收起话题详情"
-          className="rounded px-1.5 py-0.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          aria-label="收起话题详情"
+          className="rounded px-1.5 py-0.5 text-muted transition-colors hover:bg-raised hover:text-fg"
         >
           »
         </button>
       </div>
 
       {node && (
-        <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-800 px-3 py-2 text-xs">
+        <div className="scroll-stable flex items-center gap-0.5 overflow-x-auto border-b border-line px-3 py-1.5 text-xs">
           {[...ancestors, node].map((item, index, list) => {
             const isCurrent = index === list.length - 1
             return (
-              <span key={item.id} className="flex items-center gap-1 whitespace-nowrap">
+              <span key={item.id} className="flex items-center gap-0.5 whitespace-nowrap">
                 <button
                   type="button"
                   disabled={isGenerating || isCurrent}
                   title={item.title}
+                  aria-current={isCurrent ? 'true' : undefined}
                   onClick={() => selectNode(item.id)}
-                  className={`max-w-[170px] truncate rounded px-1 py-0.5 disabled:cursor-default ${
+                  className={`max-w-[170px] truncate rounded px-1 py-0.5 transition-colors disabled:cursor-default ${
                     isCurrent
-                      ? 'text-slate-200'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                      ? 'text-fg'
+                      : 'text-muted hover:bg-raised hover:text-fg'
                   }`}
                 >
                   {item.title}
                 </button>
-                {!isCurrent && <span className="text-slate-600">›</span>}
+                {!isCurrent && (
+                  <span className="text-faint" aria-hidden="true">
+                    ›
+                  </span>
+                )}
               </span>
             )
           })}
         </div>
       )}
 
-      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+      <div className="scroll-stable flex-1 space-y-3 overflow-y-auto px-3 py-3">
         {isEmptyCanvas && (
-          <div className="rounded-lg border border-slate-800 bg-slate-800/40 px-4 py-4">
-            <div className="text-[11px] uppercase tracking-wide text-slate-500">当前画布</div>
-            <div className="mt-1 text-sm font-medium text-slate-100">{detail?.canvas.title}</div>
+          <div className="rounded-md border border-line bg-raised px-3 py-3">
+            <div className="text-2xs text-faint">当前画布</div>
+            <div className="mt-1 text-sm font-medium text-fg">{detail?.canvas.title}</div>
             {detail?.canvas.description && (
-              <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-slate-400">
+              <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-muted">
                 {detail.canvas.description}
               </p>
             )}
-            <p className="mt-3 text-xs leading-relaxed text-slate-400">
+            <p className="mt-3 text-xs leading-relaxed text-muted">
               这是空画布。先在下方写下根话题（例如「C语言指针」）——这一步
-              <strong className="text-slate-300">不会调用模型</strong>；之后可以右键话题添加子话题，
+              <strong className="font-medium text-fg">不会调用模型</strong>；之后可以右键话题添加子话题，
               或直接在这个话题里提问。
             </p>
           </div>
@@ -192,10 +198,10 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
         {node && (
           <>
             {/* 话题标题 */}
-            <div className="rounded-lg bg-slate-800/60 px-3 py-2">
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-[11px] uppercase tracking-wide text-slate-500">话题</span>
-                <div className="flex gap-2">
+            <div className="rounded-md border border-line bg-raised px-3 py-2">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <span className="text-2xs text-faint">话题</span>
+                <div className="flex shrink-0 gap-2.5">
                   <button
                     type="button"
                     disabled={isGenerating}
@@ -203,7 +209,7 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
                       setTitleDraft(node.title)
                       setRenaming(true)
                     }}
-                    className="text-[11px] text-slate-400 hover:text-slate-200 disabled:opacity-40"
+                    className={`${metaButton} text-muted hover:text-fg`}
                   >
                     重命名
                   </button>
@@ -214,7 +220,7 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
                       setChildDraft('')
                       setAddingChild(true)
                     }}
-                    className="text-[11px] text-indigo-300 hover:text-indigo-200 disabled:opacity-40"
+                    className={`${metaButton} text-accent-text hover:text-accent-text/80`}
                   >
                     + 子话题
                   </button>
@@ -233,6 +239,7 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
                 >
                   <input
                     autoFocus
+                    aria-label="话题名"
                     className={field}
                     value={titleDraft}
                     onChange={(event) => setTitleDraft(event.target.value)}
@@ -240,22 +247,26 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
                       if (event.key === 'Escape') setRenaming(false)
                     }}
                   />
-                  <button type="submit" className="shrink-0 rounded bg-indigo-600 px-3 text-xs text-white">
+                  <button
+                    type="submit"
+                    className="shrink-0 rounded-md bg-accent px-3 text-xs text-on-accent transition-colors hover:bg-accent-hover"
+                  >
                     确定
                   </button>
                 </form>
               ) : (
-                <div className="text-sm font-medium text-slate-100">{node.title}</div>
+                <div className="text-sm font-medium text-fg">{node.title}</div>
               )}
 
               {node.quote && (
-                <div className="mt-2 rounded border-l-2 border-amber-500/60 bg-amber-500/5 px-2 py-1 text-xs text-amber-200">
-                  引用自父话题：「{node.quote.text}」
+                <div className="mt-2 rounded-md border border-line px-2.5 py-1.5">
+                  <div className="text-2xs text-faint">引用自父话题</div>
+                  <div className="mt-0.5 text-xs leading-relaxed text-muted">{node.quote.text}</div>
                 </div>
               )}
 
               {node.anchor && node.anchor.kind === 'code' && (
-                <pre className="mt-2 overflow-x-auto rounded bg-slate-950/80 p-2 text-xs text-slate-300">
+                <pre className="mt-2 overflow-x-auto rounded-md border border-line bg-canvas p-2 font-mono text-xs text-muted">
                   {node.anchor.code}
                 </pre>
               )}
@@ -271,6 +282,7 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
               >
                 <input
                   autoFocus
+                  aria-label="子话题名"
                   className={field}
                   value={childDraft}
                   onChange={(event) => setChildDraft(event.target.value)}
@@ -279,32 +291,35 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
                     if (event.key === 'Escape') setAddingChild(false)
                   }}
                 />
-                <button type="submit" className="shrink-0 rounded bg-indigo-600 px-3 text-xs text-white">
+                <button
+                  type="submit"
+                  className="shrink-0 rounded-md bg-accent px-3 text-xs text-on-accent transition-colors hover:bg-accent-hover"
+                >
                   添加
                 </button>
               </form>
             )}
 
             {node.summary && (
-              <div className="rounded-lg border border-amber-600/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200">
-                <div className="mb-1 flex items-center justify-between">
+              <div className="rounded-md border border-warn/30 bg-warn-soft px-3 py-2 text-xs text-warn-text">
+                <div className="mb-1 flex items-center justify-between gap-2">
                   <span>祖先话题已压缩</span>
                   <button
                     type="button"
                     disabled={isGenerating}
                     onClick={() => void uncompact(node.id)}
-                    className="text-amber-300 underline disabled:opacity-40"
+                    className="rounded underline transition-colors hover:no-underline disabled:opacity-40"
                   >
                     展开原文
                   </button>
                 </div>
-                <p className="whitespace-pre-wrap text-amber-200/80">{node.summary}</p>
+                <p className="whitespace-pre-wrap opacity-90">{node.summary}</p>
               </div>
             )}
 
             {/* 轮次列表 */}
             {node.turns.length === 0 && (
-              <p className="rounded-lg border border-dashed border-slate-800 px-3 py-4 text-center text-xs text-slate-500">
+              <p className="rounded-md border border-dashed border-line px-3 py-4 text-center text-xs text-faint">
                 这个话题还没有提问。在下方输入框提问，问答会留在这个话题里。
               </p>
             )}
@@ -317,19 +332,17 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
               const pending = turn.messages.length === 0 && !generating
 
               return (
-                <div key={turn.id} className="overflow-hidden rounded-lg border border-slate-800">
-                  <div className="border-b border-slate-800 bg-slate-800/40 px-3 py-2">
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="text-[11px] uppercase tracking-wide text-slate-500">
-                        第 {index + 1} 轮
-                      </span>
-                      <div className="flex shrink-0 gap-2">
+                <div key={turn.id} className="overflow-hidden rounded-md border border-line">
+                  <div className="border-b border-line bg-raised px-3 py-2">
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <span className="tnum text-2xs text-faint">第 {index + 1} 轮</span>
+                      <div className="flex shrink-0 items-center gap-2.5">
                         {pending ? (
                           <button
                             type="button"
                             disabled={isGenerating}
                             onClick={() => void generateTurn(turn.id)}
-                            className="rounded bg-indigo-600 px-2 py-0.5 text-[11px] text-white hover:bg-indigo-500 disabled:opacity-40"
+                            className="rounded-md bg-accent px-2 py-0.5 text-2xs text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-40"
                           >
                             生成回答
                           </button>
@@ -338,7 +351,7 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
                             type="button"
                             disabled={isGenerating}
                             onClick={() => void regenerate(turn.id)}
-                            className="text-[11px] text-slate-400 hover:text-slate-200 disabled:opacity-40"
+                            className={`${metaButton} text-muted hover:text-fg`}
                           >
                             重新生成
                           </button>
@@ -348,7 +361,7 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
                           disabled={isGenerating}
                           title="把这一轮问答移出来，成为当前话题下的一个子话题"
                           onClick={() => void promoteTurn(turn.id)}
-                          className="text-[11px] text-indigo-300 hover:text-indigo-200 disabled:opacity-40"
+                          className={`${metaButton} text-accent-text hover:text-accent-text/80`}
                         >
                           转为子话题
                         </button>
@@ -357,18 +370,18 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
                           disabled={isGenerating}
                           title="只删除这一轮问答"
                           onClick={() => void removeTurn(turn.id)}
-                          className="text-[11px] text-rose-300 hover:text-rose-200 disabled:opacity-40"
+                          className={`${metaButton} text-danger-text hover:text-danger-text/80`}
                         >
                           删除
                         </button>
                       </div>
                     </div>
-                    <div className="whitespace-pre-wrap text-sm text-slate-100">{turn.question}</div>
+                    <div className="whitespace-pre-wrap text-sm text-fg">{turn.question}</div>
                   </div>
 
-                  <div className="bg-slate-950/50 px-3 py-3">
+                  <div className="px-3 py-3">
                     {active?.error ? (
-                      <div className="text-sm text-rose-300">{active.error}</div>
+                      <div className="text-sm text-danger-text">{active.error}</div>
                     ) : (
                       <Answer
                         text={live !== undefined ? live : (active?.content ?? '')}
@@ -378,11 +391,11 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
                     )}
 
                     {generating && (
-                      <div className="mt-2">
+                      <div className="mt-2.5">
                         <button
                           type="button"
                           onClick={() => void cancel(turn.id)}
-                          className="rounded bg-rose-700 px-2 py-1 text-[11px] text-white hover:bg-rose-600"
+                          className="rounded-md border border-danger/40 bg-danger-soft px-2 py-1 text-2xs text-danger-text transition-colors hover:border-danger"
                         >
                           停止生成
                         </button>
@@ -390,18 +403,19 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
                     )}
 
                     {turn.messages.length > 1 && (
-                      <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-slate-800 pt-2">
-                        <span className="text-[11px] text-slate-500">版本：</span>
+                      <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-line pt-2">
+                        <span className="text-2xs text-faint">版本</span>
                         {turn.messages.map((message, versionIndex) => (
                           <button
                             type="button"
                             key={message.id}
                             disabled={isGenerating}
+                            aria-pressed={message.isActive}
                             onClick={() => void setActiveMessage(turn.id, message.id)}
-                            className={`rounded px-1.5 text-[11px] disabled:opacity-40 ${
+                            className={`tnum rounded px-1.5 py-0.5 text-2xs transition-colors disabled:opacity-40 ${
                               message.isActive
-                                ? 'bg-indigo-600/40 text-indigo-100'
-                                : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                                ? 'bg-accent-soft text-accent-text'
+                                : 'text-muted hover:bg-raised hover:text-fg'
                             }`}
                           >
                             v{versionIndex + 1}
@@ -410,9 +424,11 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
                       </div>
                     )}
 
-                    <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-slate-500">
+                    <div className="tnum mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-faint">
                       <span>输入 {formatTokens(active?.usagePrompt ?? 0)}</span>
+                      <span aria-hidden="true">·</span>
                       <span>缓存命中 {formatTokens(active?.usageCached ?? 0)}</span>
+                      <span aria-hidden="true">·</span>
                       <span>输出 {formatTokens(active?.usageCompletion ?? 0)}</span>
                     </div>
                   </div>
@@ -420,10 +436,11 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
               )
             })}
 
-            <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
-              <span className="text-slate-400">
-                本分支总计：{formatTokens(branchInfo.get(node.id)?.tokens.total ?? 0)}
+            <div className="tnum flex flex-wrap items-center gap-x-2.5 text-2xs text-faint">
+              <span className="text-muted">
+                本分支总计 {formatTokens(branchInfo.get(node.id)?.tokens.total ?? 0)}
               </span>
+              <span aria-hidden="true">·</span>
               <span>本话题 {node.turns.length} 轮</span>
             </div>
           </>
@@ -431,25 +448,26 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
       </div>
 
       {node && (
-        <div className="flex flex-wrap items-center gap-2 border-t border-slate-800 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2">
           <button
             type="button"
             disabled={isGenerating || busy || !node.parentId}
             onClick={() => void compact(node.id)}
             title={node.parentId ? '把祖先话题的全部问答压缩成一条摘要' : '根话题无需压缩'}
-            className="rounded bg-slate-800 px-2 py-1 text-xs text-slate-200 hover:bg-slate-700 disabled:opacity-40"
+            className="rounded-md border border-line px-2 py-1 text-xs text-muted transition-colors hover:border-line-strong hover:text-fg disabled:opacity-40"
           >
             压缩上下文
           </button>
-          <span className="text-[11px] text-slate-500">
-            删除话题请在该话题上右键（每一轮问答自己的「删除」只删那一轮）
+          <span className="text-2xs leading-snug text-faint">
+            删除话题请在该话题上右键；每一轮自己的「删除」只删那一轮
           </span>
         </div>
       )}
 
-      <div className="border-t border-slate-800 p-3">
+      <div className="border-t border-line p-3">
         <textarea
           value={draft}
+          aria-label={node ? `在「${node.title}」里提问` : '写下根话题'}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
@@ -460,25 +478,19 @@ export function NodeDetail({ width, collapsed, onToggleCollapse }: Props) {
           }}
           disabled={isGenerating}
           rows={3}
-          placeholder={
-            node
-              ? `在「${node.title}」里提问（Cmd/Ctrl + Enter 发送）`
-              : '写下根话题，例如：C语言指针'
-          }
-          className="w-full resize-none rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-indigo-500 disabled:opacity-50"
+          placeholder={node ? `在「${node.title}」里提问（Cmd/Ctrl + Enter 发送）` : '写下根话题，例如：C语言指针'}
+          className="w-full resize-none rounded-md border border-line bg-raised px-2.5 py-2 text-sm text-fg transition-colors placeholder:text-faint focus:border-accent-line disabled:opacity-50"
         />
 
         <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-[11px] leading-snug text-slate-500">
-            {node
-              ? '问答会留在这个话题里；加子话题用上方「+ 子话题」或右键'
-              : '创建后会成为根话题，此时不调用模型'}
+          <span className="text-2xs leading-snug text-faint">
+            {node ? '问答会留在这个话题里；加子话题用上方「+ 子话题」或右键' : '创建后会成为根话题，此时不调用模型'}
           </span>
           <button
             type="button"
             disabled={isGenerating || !draft.trim()}
             onClick={() => (node ? void submitTurn() : void submitRoot())}
-            className="shrink-0 rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+            className="shrink-0 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
             {node ? '提问' : '创建根话题'}
           </button>
