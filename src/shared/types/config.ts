@@ -30,6 +30,8 @@ export interface AppConfig {
   version: number
   providers: ProviderConfig[]
   defaultProviderId?: string
+  /** 全局提示词：每次请求都会拼进 system 消息，作用于所有画布 */
+  systemPrompt?: string
   ui: UiConfig
   logging?: { debug?: boolean }
 }

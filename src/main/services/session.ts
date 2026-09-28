@@ -12,7 +12,7 @@ import type {
 } from '@shared/types/domain'
 import type { SamplingParams } from '@shared/types/config'
 import type { StreamChunkEvent, StreamDoneEvent, StreamErrorEvent } from '@shared/contract'
-import { getProvider } from '@core/config'
+import { getProvider, loadConfig } from '@core/config'
 import type { Db } from '@core/db'
 import { createCanvasRepo, type CanvasRepo } from '@core/db/repos/canvas'
 import { createMessageRepo, type MessageRepo } from '@core/db/repos/message'
@@ -86,7 +86,9 @@ export function createSession(deps: SessionDeps) {
     getTurn: (id) => turnRepo.get(id),
     turnsByNode: (id) => turnRepo.byNode(id),
     getActiveByTurn: (id) => messageRepo.getActiveByTurn(id),
-    getCanvas: (id) => canvasRepo.get(id)
+    getCanvas: (id) => canvasRepo.get(id),
+    // 每次构建时现读，这样在设置页改完立刻对后续请求生效
+    getGlobalPrompt: () => loadConfig().systemPrompt
   }
 
   const tokenLookup: TokenLookup = {
@@ -333,6 +335,35 @@ export function createSession(deps: SessionDeps) {
       canvasRepo.touch(canvas.id)
 
       return { nodeId: child.id }
+    },
+
+    /**
+     * 「转为子话题」的逆操作：把这一轮问答并回父话题（追加到父话题末尾），不调用模型。
+     * 若本话题因此既没有轮次也没有子话题，就一并删掉，避免画布上留下空壳节点。
+     */
+    mergeTurnToParent(turnId: string): NodeResult {
+      const turn = requireTurn(turnId)
+      const node = requireNode(turn.nodeId)
+      if (!node.parentId) throw new Error('根话题没有父话题可以合并')
+      const parent = requireNode(node.parentId)
+      const canvas = canvasRepo.get(node.canvasId)
+      if (!canvas) throw new Error(`画布不存在: ${node.canvasId}`)
+
+      // 追加到父话题末尾：先数一次父话题现有轮次，再搬过去
+      turnRepo.move(turn.id, parent.id, turnRepo.byNode(parent.id).length)
+      // 冗余列必须跟着改，否则删子树/按话题查询会漏
+      messageRepo.reassignNode(turn.id, parent.id)
+      turnRepo.reindex(node.id)
+      nodeRepo.touch(parent.id)
+      canvasRepo.touch(canvas.id)
+
+      const emptied = turnRepo.byNode(node.id).length === 0 && nodeRepo.children(node.id).length === 0
+      if (emptied) {
+        if (canvas.rootNodeId === node.id) canvasRepo.update(canvas.id, { rootNodeId: null })
+        nodeRepo.deleteSubtree(node.id)
+      }
+
+      return { nodeId: emptied ? parent.id : node.id }
     },
 
     async compact(nodeId: string): Promise<void> {

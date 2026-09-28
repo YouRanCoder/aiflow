@@ -18,6 +18,8 @@ export interface ContextSource {
   turnsByNode(nodeId: string): Turn[]
   getActiveByTurn(turnId: string): Message | undefined
   getCanvas(id: string): Canvas | undefined
+  /** 用户配置的全局提示词；缺省即不注入 */
+  getGlobalPrompt?: () => string | undefined
 }
 
 export interface BuildResult {
@@ -26,9 +28,16 @@ export interface BuildResult {
   usedCompactAt?: string
 }
 
-function canvasHeader(canvas: Canvas | undefined): string {
-  if (!canvas) return SYSTEM_PROMPT
-  return `${SYSTEM_PROMPT}\n\n当前画布：${canvas.title}`
+/**
+ * system 消息 = 基础角色说明 → 全局提示词 → 当前画布。
+ * 顺序固定，因此同一份全局提示词下所有分支的 system 前缀完全一致（利于前缀缓存）。
+ */
+function systemMessage(canvas: Canvas | undefined, globalPrompt: string | undefined): string {
+  const parts = [SYSTEM_PROMPT]
+  const prompt = globalPrompt?.trim()
+  if (prompt) parts.push(`【全局提示词】\n${prompt}`)
+  if (canvas) parts.push(`当前画布：${canvas.title}`)
+  return parts.join('\n\n')
 }
 
 /** 把一个祖先话题（标题 + 它全部已生成的问答）追加进上下文 */
@@ -69,7 +78,9 @@ export function buildContext(turnId: string, source: ContextSource): BuildResult
   const chain = source.ancestors(targetNode.id)
 
   const rootNode = chain[0] ?? targetNode
-  const messages: ChatMessage[] = [{ role: 'system', content: canvasHeader(canvas) }]
+  const messages: ChatMessage[] = [
+    { role: 'system', content: systemMessage(canvas, source.getGlobalPrompt?.()) }
+  ]
 
   if (rootNode.anchor) {
     messages.push({ role: 'user', content: renderAnchor(rootNode.anchor) })

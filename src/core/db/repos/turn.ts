@@ -47,10 +47,10 @@ export function createTurnRepo(db: Db) {
       db.update(turns).set(set).where(eq(turns.id, id)).run()
     },
 
-    /** 把一轮挪到另一个话题下（成为该话题的第 0 轮） */
-    move(id: string, nodeId: string): void {
+    /** 把一轮挪到另一个话题下；不传 orderIndex 时放在第 0 位 */
+    move(id: string, nodeId: string, orderIndex = 0): void {
       db.update(turns)
-        .set({ nodeId, orderIndex: 0, updatedAt: Date.now() })
+        .set({ nodeId, orderIndex, updatedAt: Date.now() })
         .where(eq(turns.id, id))
         .run()
     },

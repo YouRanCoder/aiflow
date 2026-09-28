@@ -261,6 +261,80 @@ describe('会话服务集成（Mock OpenAI）', () => {
     expect(detail.tokens.total).toBe(240)
   })
 
+  it('合并到父话题：轮次追加到父话题末尾，原话题还有其它轮就保留', async () => {
+    const canvas = session.createCanvas({ title: '合并', providerId: 'test', model: 'mock-model' })
+    const root = session.createNode({ canvasId: canvas.id, parentId: null, title: '指针' })
+    session.askTurn({ nodeId: root.nodeId, question: '根问题' })
+    await waitForGeneration()
+
+    const child = session.createNode({ canvasId: canvas.id, parentId: root.nodeId, title: '地址' })
+    session.askTurn({ nodeId: child.nodeId, question: '子问题一' })
+    await waitForGeneration()
+    const second = session.askTurn({ nodeId: child.nodeId, question: '子问题二' })
+    await waitForGeneration()
+
+    const requestsBefore = mock.requests.length
+    const result = session.mergeTurnToParent(second.turnId)
+    expect(mock.requests.length).toBe(requestsBefore)
+    // 话题没变空，所以位置不动
+    expect(result.nodeId).toBe(child.nodeId)
+
+    const detail = session.getCanvasDetail(canvas.id)
+    const rootNode = detail.nodes.find((n) => n.id === root.nodeId)
+    const childNode = detail.nodes.find((n) => n.id === child.nodeId)
+
+    // 追加到父话题末尾，而不是插到最前
+    expect(rootNode?.turns.map((t) => t.question)).toEqual(['根问题', '子问题二'])
+    expect(rootNode?.turns.map((t) => t.orderIndex)).toEqual([0, 1])
+
+    expect(childNode?.turns.map((t) => t.question)).toEqual(['子问题一'])
+    expect(childNode?.turns[0].orderIndex).toBe(0)
+
+    // 冗余列跟着改，否则删子树/按话题查询会漏
+    expect(rootNode?.turns[1].messages[0].nodeId).toBe(root.nodeId)
+    // token 总量不变，只是换了归属
+    expect(detail.tokens.total).toBe(360)
+  })
+
+  it('合并后话题变空则一并删除，不留空壳节点', async () => {
+    const canvas = session.createCanvas({ title: '合并删空', providerId: 'test', model: 'mock-model' })
+    const root = session.createNode({ canvasId: canvas.id, parentId: null, title: '根' })
+    const child = session.createNode({ canvasId: canvas.id, parentId: root.nodeId, title: '子' })
+    const { turnId } = session.askTurn({ nodeId: child.nodeId, question: '子问题' })
+    await waitForGeneration()
+
+    const result = session.mergeTurnToParent(turnId)
+
+    expect(result.nodeId).toBe(root.nodeId)
+    expect(session.repos.nodeRepo.get(child.nodeId)).toBeUndefined()
+
+    const rootNode = session.getCanvasDetail(canvas.id).nodes.find((n) => n.id === root.nodeId)
+    expect(rootNode?.turns.map((t) => t.question)).toEqual(['子问题'])
+    expect(rootNode?.turns[0].messages[0].nodeId).toBe(root.nodeId)
+  })
+
+  it('有子话题的话题即使没有轮次也不会被删掉', async () => {
+    const canvas = session.createCanvas({ title: '带子保留', providerId: 'test', model: 'mock-model' })
+    const root = session.createNode({ canvasId: canvas.id, parentId: null, title: '根' })
+    const mid = session.createNode({ canvasId: canvas.id, parentId: root.nodeId, title: '中间' })
+    session.createNode({ canvasId: canvas.id, parentId: mid.nodeId, title: '叶子' })
+    const { turnId } = session.askTurn({ nodeId: mid.nodeId, question: '中间问题' })
+    await waitForGeneration()
+
+    const result = session.mergeTurnToParent(turnId)
+
+    expect(result.nodeId).toBe(mid.nodeId)
+    expect(session.repos.nodeRepo.get(mid.nodeId)).toBeTruthy()
+  })
+
+  it('根话题没有父话题可以合并', () => {
+    const canvas = session.createCanvas({ title: '根合并', providerId: 'test', model: 'mock-model' })
+    const root = session.createNode({ canvasId: canvas.id, parentId: null, title: '根' })
+    const { turnId } = session.addTurn({ nodeId: root.nodeId, question: '根问题' })
+
+    expect(() => session.mergeTurnToParent(turnId)).toThrow('根话题没有父话题可以合并')
+  })
+
   it('删除某一轮后，话题内剩余轮次顺序被压紧', async () => {
     const canvas = session.createCanvas({ title: '删轮次', providerId: 'test', model: 'mock-model' })
     const root = session.createNode({ canvasId: canvas.id, parentId: null, title: '话题' })

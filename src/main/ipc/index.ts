@@ -109,6 +109,9 @@ export function registerIpc(session: Session): void {
     return true
   })
   handle(IPC.turnPromote, ({ turnId }: { turnId: string }) => session.promoteTurn(turnId))
+  handle(IPC.turnMergeToParent, ({ turnId }: { turnId: string }) =>
+    session.mergeTurnToParent(turnId)
+  )
   handle(
     IPC.turnSetActiveMessage,
     ({ turnId, messageId }: { turnId: string; messageId: string }) => {

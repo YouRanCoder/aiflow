@@ -37,6 +37,7 @@ export const IPC = {
   turnRegenerate: 'turn:regenerate',
   turnDelete: 'turn:delete',
   turnPromote: 'turn:promote',
+  turnMergeToParent: 'turn:merge-to-parent',
   turnSetActiveMessage: 'turn:set-active-message',
 
   tokensCanvas: 'tokens:canvas',

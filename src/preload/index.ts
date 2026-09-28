@@ -101,6 +101,8 @@ const api = {
     remove: (turnId: string): Promise<boolean> => call<boolean>(IPC.turnDelete, { turnId }),
     promote: (turnId: string): Promise<{ nodeId: string }> =>
       call<{ nodeId: string }>(IPC.turnPromote, { turnId }),
+    mergeToParent: (turnId: string): Promise<{ nodeId: string }> =>
+      call<{ nodeId: string }>(IPC.turnMergeToParent, { turnId }),
     setActiveMessage: (turnId: string, messageId: string): Promise<boolean> =>
       call<boolean>(IPC.turnSetActiveMessage, { turnId, messageId }),
     cancel: (turnId: string): Promise<boolean> => call<boolean>(IPC.generateCancel, { turnId })

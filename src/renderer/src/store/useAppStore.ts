@@ -39,6 +39,8 @@ interface AppState {
   removeTurn: (turnId: string) => Promise<void>
   /** 把某一轮问答提升为当前话题的子话题（那一轮移过去，不调模型） */
   promoteTurn: (turnId: string) => Promise<void>
+  /** 「转为子话题」的逆操作：把那一轮并回父话题；本话题变空会被删除 */
+  mergeTurnToParent: (turnId: string) => Promise<void>
   setActiveMessage: (turnId: string, messageId: string) => Promise<void>
   cancel: (turnId: string) => Promise<void>
 
@@ -307,6 +309,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const { nodeId } = await window.api.turn.promote(turnId)
       await get().refreshDetail()
+      set({ selectedNodeId: nodeId })
+    } catch (err) {
+      set({ error: errMessage(err) })
+    }
+  },
+
+  async mergeTurnToParent(turnId) {
+    try {
+      const { nodeId } = await window.api.turn.mergeToParent(turnId)
+      await get().refreshDetail()
+      // 话题没被删就留在原地，被删了则选中父话题
       set({ selectedNodeId: nodeId })
     } catch (err) {
       set({ error: errMessage(err) })

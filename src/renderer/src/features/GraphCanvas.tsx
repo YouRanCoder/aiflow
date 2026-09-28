@@ -15,10 +15,12 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { NodeWithTurns } from '@shared/types/domain'
-import { ContextMenu, type MenuState } from './ContextMenu'
+import { ContextMenu } from './ContextMenu'
+import { useNodeMenu } from './useNodeMenu'
 import { formatTokens, truncate } from '../lib/format'
 import { computeTreeLayout } from '../lib/layout'
 import { computeBranchInfo } from '../lib/tokens'
+import { nodeFailed } from '../lib/turns'
 import { useAppStore } from '../store/useAppStore'
 
 const NODE_WIDTH = 208
@@ -80,7 +82,7 @@ function TopicNode({ id, data }: NodeProps) {
               event.stopPropagation()
               node.onToggleCollapse(id)
             }}
-            className="shrink-0 rounded px-1 text-2xs text-faint transition-colors hover:text-fg disabled:opacity-40"
+            className="-mr-1 -mt-0.5 flex h-5 shrink-0 items-center justify-center gap-0.5 rounded px-1 text-xs leading-none text-muted transition-colors hover:bg-accent-soft hover:text-fg disabled:opacity-40"
           >
             {node.collapsed ? `▸${node.childCount}` : '▾'}
           </button>
@@ -129,15 +131,13 @@ function GraphInner() {
   const moveNode = useAppStore((s) => s.moveNode)
   const toggleCollapse = useAppStore((s) => s.toggleCollapse)
   const addNode = useAppStore((s) => s.addNode)
-  const renameNode = useAppStore((s) => s.renameNode)
-  const removeNode = useAppStore((s) => s.removeNode)
 
   const { fitView } = useReactFlow()
   const [rootDraft, setRootDraft] = useState('')
-  const [menu, setMenu] = useState<MenuState | null>(null)
   const lastSelectionFromGraphRef = useRef(false)
 
   const nodes = useMemo(() => detail?.nodes ?? [], [detail])
+  const { menu, openNodeMenu, closeMenu } = useNodeMenu(nodes)
 
   const layout = useMemo(
     () => computeTreeLayout(nodes, { columnWidth: COLUMN_WIDTH, rowHeight: ROW_HEIGHT }),
@@ -179,7 +179,7 @@ function GraphInner() {
             turnCount: node.turns.length,
             selected: node.id === selectedNodeId,
             generating: node.turns.some((turn) => generatingMap[turn.id]),
-            failed: node.turns.some((turn) => turn.messages.some((message) => message.error)),
+            failed: nodeFailed(node),
             summarized: Boolean(node.summary),
             collapsed: node.collapsed,
             childCount: info?.childCount ?? 0,
@@ -264,48 +264,6 @@ function GraphInner() {
     await addNode(null, title)
   }
 
-  /** 在话题卡片上右键 */
-  function openNodeMenu(event: React.MouseEvent, nodeId: string): void {
-    event.preventDefault()
-    event.stopPropagation()
-    const target = nodes.find((node) => node.id === nodeId)
-    if (!target) return
-    const childCount = nodes.filter((node) => node.parentId === nodeId).length
-
-    setMenu({
-      x: event.clientX,
-      y: event.clientY,
-      items: [
-        {
-          label: '添加子话题',
-          input: {
-            placeholder: '子话题名，例如「什么是地址」',
-            onSubmit: (value) => void addNode(nodeId, value)
-          }
-        },
-        {
-          label: '重命名话题',
-          input: {
-            placeholder: '话题名',
-            initial: target.title,
-            onSubmit: (value) => void renameNode(nodeId, value)
-          }
-        },
-        {
-          label: target.collapsed ? '展开子话题' : '折叠子话题',
-          disabled: childCount === 0,
-          onSelect: () => void toggleCollapse(nodeId)
-        },
-        {
-          label: '删除该话题及其子话题',
-          danger: true,
-          confirmLabel: '再点一次确认删除',
-          onConfirm: () => void removeNode(nodeId)
-        }
-      ]
-    })
-  }
-
   if (!detail) {
     return (
       <div className="absolute inset-0 flex items-center justify-center text-sm text-faint">
@@ -382,7 +340,7 @@ function GraphInner() {
         />
         <Controls showInteractive={false} />
       </ReactFlow>
-      <ContextMenu state={menu} onClose={() => setMenu(null)} />
+      <ContextMenu state={menu} onClose={closeMenu} />
     </div>
   )
 }

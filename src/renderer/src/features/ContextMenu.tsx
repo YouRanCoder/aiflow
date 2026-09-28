@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 
 export interface MenuItem {
   label: string
+  /** 悬停时的原生提示，用来解释某一项为什么是灰的 */
+  title?: string
   danger?: boolean
   disabled?: boolean
   onSelect?: () => void
@@ -107,6 +109,7 @@ export function ContextMenu({ state, onClose }: Props) {
             type="button"
             role="menuitem"
             disabled={item.disabled}
+            title={item.title}
             onClick={() => {
               if (item.input) {
                 setValue(item.input.initial ?? '')

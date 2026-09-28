@@ -55,6 +55,7 @@ export const AppConfigSchema = z.object({
   version: z.number().int(),
   providers: z.array(ProviderConfigSchema),
   defaultProviderId: z.string().optional(),
+  systemPrompt: z.string().optional(),
   ui: UiConfigSchema,
   logging: z.object({ debug: z.boolean().optional() }).optional()
 })
@@ -103,6 +104,7 @@ export const requestSchemas = {
   [IPC.turnRegenerate]: z.object({ turnId: z.string().min(1) }),
   [IPC.turnDelete]: z.object({ turnId: z.string().min(1) }),
   [IPC.turnPromote]: z.object({ turnId: z.string().min(1) }),
+  [IPC.turnMergeToParent]: z.object({ turnId: z.string().min(1) }),
   [IPC.turnSetActiveMessage]: z.object({
     turnId: z.string().min(1),
     messageId: z.string().min(1)

@@ -143,4 +143,28 @@ describe('buildContext（话题 + 多轮）', () => {
     const contents = contentsOf(store, 't-arith-1')
     expect(contents.some((c) => c.includes('失败的一轮'))).toBe(false)
   })
+
+  it('全局提示词注入进 system 消息，兄弟分支共享同一份前缀', () => {
+    const { store } = setup()
+    const withPrompt = { ...store, getGlobalPrompt: () => '回答用中文' }
+
+    const messages = buildContext('t-addr-1', withPrompt).messages
+    expect(messages[0].role).toBe('system')
+    expect(messages[0].content).toContain('【全局提示词】')
+    expect(messages[0].content).toContain('回答用中文')
+    expect(messages[0].content).toContain('当前画布：测试画布')
+
+    // system 消息里没有话题相关内容，所以兄弟分支的第一条完全相同（前缀缓存友好）
+    expect(buildContext('t-addr-1', withPrompt).messages[0]).toEqual(
+      buildContext('t-deref-1', withPrompt).messages[0]
+    )
+  })
+
+  it('全局提示词未配置或为空白时不注入', () => {
+    const { store } = setup()
+    expect(buildContext('t-addr-1', store).messages[0].content).not.toContain('【全局提示词】')
+
+    const blank = { ...store, getGlobalPrompt: () => '   \n  ' }
+    expect(buildContext('t-addr-1', blank).messages[0].content).not.toContain('【全局提示词】')
+  })
 })

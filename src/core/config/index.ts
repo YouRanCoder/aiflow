@@ -7,6 +7,7 @@ export function defaultConfig(): AppConfig {
   return {
     version: 1,
     providers: [],
+    systemPrompt: '',
     ui: { skin: 'tree', theme: 'system' },
     logging: { debug: false }
   }

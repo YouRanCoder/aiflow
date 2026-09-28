@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { NodeWithTurns } from '@shared/types/domain'
-import { ContextMenu, type MenuState } from './ContextMenu'
+import { ContextMenu } from './ContextMenu'
+import { useNodeMenu } from './useNodeMenu'
 import { formatTokens, truncate } from '../lib/format'
 import { computeBranchInfo } from '../lib/tokens'
+import { nodeFailed } from '../lib/turns'
 import { useAppStore } from '../store/useAppStore'
 
 function NodeRow({
@@ -27,7 +29,7 @@ function NodeRow({
   const children = byParent.get(node.id) ?? []
   const isSelected = selectedNodeId === node.id
   const generating = node.turns.some((turn) => generatingMap[turn.id])
-  const hasError = node.turns.some((turn) => turn.messages.some((message) => message.error))
+  const hasError = nodeFailed(node)
   const rowRef = useRef<HTMLDivElement>(null)
 
   // 从面包屑等地方跳过来时，把这一行滚进视野
@@ -59,16 +61,17 @@ function NodeRow({
           <button
             type="button"
             aria-label={node.collapsed ? '展开子话题' : '折叠子话题'}
+            title={node.collapsed ? '展开子话题' : '折叠子话题'}
             onClick={(event) => {
               event.stopPropagation()
               void toggleCollapse(node.id)
             }}
-            className="w-4 shrink-0 text-2xs text-faint transition-colors hover:text-fg"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs leading-none text-muted transition-colors hover:bg-accent-soft hover:text-fg"
           >
             {node.collapsed ? '▸' : '▾'}
           </button>
         ) : (
-          <span className="w-4 shrink-0 text-center text-2xs text-faint" aria-hidden="true">
+          <span className="flex w-5 shrink-0 justify-center text-xs text-faint" aria-hidden="true">
             ·
           </span>
         )}
@@ -114,12 +117,6 @@ function NodeRow({
 
 export function TreeCanvas() {
   const detail = useAppStore((s) => s.detail)
-  const addNode = useAppStore((s) => s.addNode)
-  const renameNode = useAppStore((s) => s.renameNode)
-  const removeNode = useAppStore((s) => s.removeNode)
-  const toggleCollapse = useAppStore((s) => s.toggleCollapse)
-
-  const [menu, setMenu] = useState<MenuState | null>(null)
 
   const byParent = useMemo(() => {
     const map = new Map<string | null, NodeWithTurns[]>()
@@ -135,46 +132,7 @@ export function TreeCanvas() {
 
   const nodes = detail?.nodes ?? []
   const roots = byParent.get(null) ?? []
-
-  function openNodeMenu(event: React.MouseEvent, nodeId: string): void {
-    event.preventDefault()
-    const target = nodes.find((node) => node.id === nodeId)
-    if (!target) return
-    const childCount = nodes.filter((node) => node.parentId === nodeId).length
-
-    setMenu({
-      x: event.clientX,
-      y: event.clientY,
-      items: [
-        {
-          label: '添加子话题',
-          input: {
-            placeholder: '子话题名，例如「什么是地址」',
-            onSubmit: (value) => void addNode(nodeId, value)
-          }
-        },
-        {
-          label: '重命名话题',
-          input: {
-            placeholder: '话题名',
-            initial: target.title,
-            onSubmit: (value) => void renameNode(nodeId, value)
-          }
-        },
-        {
-          label: target.collapsed ? '展开子话题' : '折叠子话题',
-          disabled: childCount === 0,
-          onSelect: () => void toggleCollapse(nodeId)
-        },
-        {
-          label: '删除该话题及其子话题',
-          danger: true,
-          confirmLabel: '再点一次确认删除',
-          onConfirm: () => void removeNode(nodeId)
-        }
-      ]
-    })
-  }
+  const { menu, openNodeMenu, closeMenu } = useNodeMenu(nodes)
 
   if (!detail) {
     return (
@@ -206,7 +164,7 @@ export function TreeCanvas() {
           onOpenMenu={openNodeMenu}
         />
       ))}
-      <ContextMenu state={menu} onClose={() => setMenu(null)} />
+      <ContextMenu state={menu} onClose={closeMenu} />
     </div>
   )
 }
